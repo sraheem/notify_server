@@ -2,10 +2,9 @@
 
 #Hourly checks on websites/webservices URL's using curl command to check status. Add more lines as needed. Logging in notify.log .
 #NADRA Complaint site, NADRA Status, CanadaPost supported.
-#Blackout period between 1-6 am MST, SLM improvements,tidy output, correct PIN pronounciation for canpost tracking
-#Ignore and log SLM and Maintenance messages. Loop Variables added for better control. Notify_level backend implemented.
+#See README for more details
 #Add tracking numbers to CANPOST_LIST.txt for tracking Canada Post parcels
-#v 1.7, September 3, 2015
+#v 1.8, September 21, 2015
 
 #Loop variable declaration
 NCLoop=1
@@ -80,14 +79,14 @@ done
 # CanadaPost Loop
 
 #Parameter check and function definition
-
+#Substitute with your Canadapost Developer Credentials.
 cancheck ()
 {
 curl -s --cacert /root/notify_server/cert/cacert.pem -X GET -u "c65828b0742b48f3:6f20cb918dd596f5bcb1ae" -H "Accept:application/vnd.cpc.track+xml" -H "Accept-Language:en-CA" https://soa-gw.canadapost.ca/vis/track/pin/$PIN/detail | tidy -xml -iq
 }
 
 
-#The real canpostloop
+#Loop start
 while read line; do
     sleep 4
     IFS=' ' read -a callarray <<< "$line"
@@ -131,11 +130,22 @@ while read line; do
     #Check current status
     cancheck > /root/notify_server/texts/$temp_file
 
-    #Break from loop if SLM message is received
+    #Break from loop if SLM/backend/Auth failure is received
     isSLM=$( grep -c "Rejected by SLM Monitor" /root/notify_server/texts/$temp_file )
+    isBCK=$( grep -c "Failed to establish a backside" /root/notify_server/texts/$temp_file )
+    isAAA=$( grep -c "AAA Authentication Failure" /root/notify_server/texts/$temp_file )
+
     if [ $isSLM -ne 0 ]
     then
         echo "`date +%Y-%m-%dT%H:%M:%S` SLM Monitor rejected tracking of $PIN. Please check if problem persists." >> /root/notify_server/notify.log
+        continue
+    elif [ $isBCK -ne 0 ]
+    then
+        echo "`date +%Y-%m-%dT%H:%M:%S` Failed to establish backend connection while tracking $PIN. Please check if problem persists." >> /root/notify_server/notify.log
+        continue
+    elif [ $isAAA -ne 0 ]
+    then
+        echo "`date +%Y-%m-%dT%H:%M:%S` One-off AAA Auth failure detected while tracking $PIN. Please check if problem persists." >> /root/notify_server/notify.log
         continue
     fi
 
