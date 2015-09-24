@@ -1,0 +1,7 @@
+Channel: IAX2/101
+CallerID: NADRA_Notify
+MaxRetries: 3
+RetryTime: 60
+Application: AGI
+Data: googletts-tiny.agi,"Hey, I just met you... and this is crazy. But here's my number. So Call me maybe!",en
+

@@ -1,0 +1,7 @@
+Channel: IAX2/101
+CallerID: NADRA_Notify
+MaxRetries: 3
+RetryTime: 60
+Context: from-internal
+Extension: 100
+Priority: 1

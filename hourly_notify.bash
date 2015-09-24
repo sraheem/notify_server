@@ -4,17 +4,20 @@
 #NADRA Complaint site, NADRA Status, CanadaPost supported.
 #See README for more details
 #Add tracking numbers to CANPOST_LIST.txt for tracking Canada Post parcels
-#v 1.8, September 21, 2015
+#v 1.9, September 24, 2015
 
 #Loop variable declaration
 NCLoop=1
 NSLoop=1
 #CPLoop=1
 
+#Set environment variables
+. /root/notify_server/setvars
+
 #NADRA complaint check
 while [ $NCLoop -eq 1 ] 
 do
-curl -s https://nadra.gov.pk/chat/complaint/ticket.php?track=H7QBJZ7SNN | grep -v change_status.php > /root/notify_server/texts/NADRA_complain_temp.txt
+curl -s https://nadra.gov.pk/chat/complaint/ticket.php?track=$NADRACOMPLAINTID | grep -v change_status.php > /root/notify_server/texts/NADRA_complain_temp.txt
 
 #Check if website down. Log and Ignore
 NCdown=$( grep -c "We are sorry for the inconvenience" /root/notify_server/texts/NADRA_complain_temp.txt)
@@ -36,8 +39,8 @@ else
     sleep 1
     /root/notify_server/callfilegenerator.bash MTF 15879693460 NADRA_Complaint 3 Playback NADRA
     sleep 240
-#    /root/notify_server/callfilegenerator.bash IAX 101 NADRA_Complaint 3 Playback NADRA
-#    sleep 240
+    /root/notify_server/callfilegenerator.bash IAX 101 NADRA_Complaint 3 Playback NADRA
+    sleep 240
 #    /root/notify_server/callfilegenerator.bash IAX 102 NADRA_Complaint 3 Playback NADRA
 #    sleep 240
 #    /root/notify_server/callfilegenerator.bash IAX 123 NADRA_Complaint 3 Playback NADRA
@@ -52,7 +55,7 @@ done
 #NADRA status check
 while [ $NSLoop -eq 1 ]
 do
-curl -s -d "frno=2168999&&type=nicop" https://www.nadra.gov.pk/nicoppoctracking/status.php > /root/notify_server/texts/NADRA_status_tmp.txt
+curl -s -d "frno=$NADRASTATUSID&&type=nicop" https://www.nadra.gov.pk/nicoppoctracking/status.php > /root/notify_server/texts/NADRA_status_tmp.txt
 
 #NADRA Status Comparison alogorithm
 if diff /root/notify_server/texts/NADRA_status_orig.txt /root/notify_server/texts/NADRA_status_tmp.txt >> /dev/null
@@ -63,11 +66,11 @@ else
     echo "`date +%Y-%m-%dT%H:%M:%S` Difference found - NADRA Status (2168999)." >> /root/notify_server/notify.log
     #After logging make calls
     sleep 1
-    /root/notify_server/callfilegenerator.bash IAX 101 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for 2 1 6 8 9 9 9"
+    /root/notify_server/callfilegenerator.bash IAX 101 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for $NADRASTATUSID"
     sleep 240
-    /root/notify_server/callfilegenerator.bash MTF 15879693460 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for 2 1 6 8 9 9 9"
+    /root/notify_server/callfilegenerator.bash MTF 15879693460 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for $NADRASTATUSID"
     #sleep 240
-    #/root/notify_server/callfilegenerator.bash IAX 123 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for 2 1 6 8 9 9 9"
+    #/root/notify_server/callfilegenerator.bash IAX 123 NADRA_Status 3 TTS "NADRA Status has been updated. Please check NICOP status for $NADRASTATUSID"
     sleep 1
     echo "`date +%Y-%m-%dT%H:%M:%S` Updating NADRA status original." >> /root/notify_server/notify.log
     mv -f /root/notify_server/texts/NADRA_status_tmp.txt /root/notify_server/texts/NADRA_status_orig.txt
@@ -79,10 +82,9 @@ done
 # CanadaPost Loop
 
 #Parameter check and function definition
-#Substitute with your Canadapost Developer Credentials.
 cancheck ()
 {
-curl -s --cacert /root/notify_server/cert/cacert.pem -X GET -u "c65828b0742b48f3:6f20cb918dd596f5bcb1ae" -H "Accept:application/vnd.cpc.track+xml" -H "Accept-Language:en-CA" https://soa-gw.canadapost.ca/vis/track/pin/$PIN/detail | tidy -xml -iq
+curl -s --cacert /root/notify_server/cert/cacert.pem -X GET -u "$CANPOSTSTRING" -H "Accept:application/vnd.cpc.track+xml" -H "Accept-Language:en-CA" https://soa-gw.canadapost.ca/vis/track/pin/$PIN/detail | tidy -xml -iq
 }
 
 
